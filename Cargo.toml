@@ -1,0 +1,15 @@
+[package]
+name = "stamp-rs"
+version = "0.1.0"
+authors = ["tylervipond <tylervipond@gmail.com>"]
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+name = "stamp_rs"
+path = "src/lib.rs"
+
+[[bin]]
+name = "apprentice"
+path = "src/main.rs"
+
