@@ -1,5 +1,8 @@
 #![allow(dead_code)]
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 fn transpose<T: Copy>(original_pattern: &Vec<Vec<T>>) -> Vec<Vec<T>> {
     let mut pattern = vec![Vec::with_capacity(original_pattern.len()); original_pattern[0].len()];
     for r in original_pattern {
@@ -17,12 +20,13 @@ fn reverse_cols<T>(pattern: &mut Vec<Vec<T>>) {
 }
 
 #[derive(Debug, Clone)]
-pub struct Stamp<T: Copy + PartialEq> {
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct Stamp<T: Clone + Copy + PartialEq> {
     height: u32,
     width: u32,
     pattern: Vec<Vec<T>>,
 }
-impl<T: Copy + PartialEq> Stamp<T> {
+impl<T: Clone + Copy + PartialEq> Stamp<T> {
     pub fn new(pattern: Vec<Vec<T>>) -> Self {
         Self {
             height: pattern.len() as u32,
