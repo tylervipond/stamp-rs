@@ -2,6 +2,9 @@
 
 This is a very limited two-dimensional array manipulation library. It's specifically made to allow for searching and merging (stamping) two-dimensional arrays. You can create a Stamp which you can then rotate, use to search for a matching stamp inside a stamp, and replace parts of a stamp with another stamp.
 
+## Note
+This lib is not yet stable, if you use it please ensure to specify the exact version.
+
 ## Usage
 
 ```rust
