@@ -16,7 +16,7 @@ fn reverse_cols<T>(pattern: &mut Vec<Vec<T>>) {
     pattern.reverse();
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Stamp<T: Copy + PartialEq> {
     height: u32,
     width: u32,
