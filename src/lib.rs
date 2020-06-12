@@ -22,9 +22,9 @@ fn reverse_cols<T>(pattern: &mut Vec<Vec<T>>) {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Stamp<T: Clone + Copy + PartialEq> {
-    height: u32,
-    width: u32,
-    pattern: Vec<Vec<T>>,
+    pub height: u32,
+    pub width: u32,
+    pub pattern: Vec<Vec<T>>,
 }
 impl<T: Clone + Copy + PartialEq> Stamp<T> {
     pub fn new(pattern: Vec<Vec<T>>) -> Self {
@@ -62,23 +62,23 @@ impl<T: Clone + Copy + PartialEq> Stamp<T> {
             }
         }
     }
-    pub fn find(&self, pattern: &[&[T]]) -> Vec<(usize, usize)> {
+    pub fn find(&self, stamp: &Stamp<T>) -> Vec<(usize, usize)> {
         let mut matches = Vec::new();
-        let pattern_height = pattern.len();
-        if pattern_height > self.height as usize
+        let pattern_height = stamp.height;
+        let pattern_width = stamp.width;
+        if pattern_height > self.height
             || pattern_height == 0
-            || pattern[0].len() > self.width as usize
+            || pattern_width > self.width
         {
             return matches;
         }
-        let pattern_width = pattern[0].len();
-        let last_y_index = self.width as usize - pattern_height;
-        let last_x_index = self.height as usize - pattern_width;
+        let last_y_index = self.width - pattern_height;
+        let last_x_index = self.height - pattern_width;
         for y in 0..=last_y_index {
             'outer: for x in 0..=last_x_index {
                 for (pattern_y, this_y) in (y..y + pattern_height).enumerate() {
                     for (pattern_x, this_x) in (x..x + pattern_width).enumerate() {
-                        if pattern[pattern_y][pattern_x]
+                        if stamp.pattern[pattern_y][pattern_x]
                             != self.pattern[this_y as usize][this_x as usize]
                         {
                             continue 'outer;
