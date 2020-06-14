@@ -74,8 +74,8 @@ impl<T: Clone + Copy + PartialEq> Stamp<T> {
         }
         let last_y_index = self.width - pattern_height;
         let last_x_index = self.height - pattern_width;
-        for y in 0..=last_y_index {
-            'outer: for x in 0..=last_x_index {
+        for y in 0..last_y_index {
+            'outer: for x in 0..last_x_index {
                 for (pattern_y, this_y) in (y..y + pattern_height).enumerate() {
                     for (pattern_x, this_x) in (x..x + pattern_width).enumerate() {
                         if stamp.pattern[pattern_y][pattern_x]
