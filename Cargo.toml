@@ -1,6 +1,6 @@
 [package]
 name = "stamp-rs"
-version = "0.4.0"
+version = "0.4.5"
 authors = ["tylervipond <tylervipond@gmail.com>"]
 edition = "2018"
 
@@ -10,7 +10,7 @@ name = "stamp_rs"
 path = "src/lib.rs"
 
 [[bin]]
-name = "apprentice"
+name = "stamp_rs"
 path = "src/main.rs"
 
 [dependencies]

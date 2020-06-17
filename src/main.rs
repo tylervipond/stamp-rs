@@ -17,9 +17,9 @@ fn main() {
     stamp.stamp(&stamp2, 1, 1);
     dbg!(&stamp);
     let query_stamp = Stamp::new(vec![
-        vec![Is(&[0]), Is(&[0])],
-        vec![Is(&[1]), Is(&[1])],
-        vec![Is(&[1]), Is(&[1])],
+        vec![Is(Box::new([0])), Is(Box::new([0]))],
+        vec![Is(Box::new([1])), Is(Box::new([1]))],
+        vec![Is(Box::new([1])), Is(Box::new([1]))],
     ]);
     let matches = stamp.find(&query_stamp);
     dbg!(matches);

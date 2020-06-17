@@ -3,11 +3,11 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-fn transpose<T: Copy>(original_pattern: &Vec<Vec<T>>) -> Vec<Vec<T>> {
+fn transpose<T: Clone>(original_pattern: &Vec<Vec<T>>) -> Vec<Vec<T>> {
     let mut pattern = vec![Vec::with_capacity(original_pattern.len()); original_pattern[0].len()];
     for r in original_pattern {
         for i in 0..r.len() {
-            pattern[i].push(r[i]);
+            pattern[i].push(r[i].clone());
         }
     }
     pattern
@@ -21,28 +21,28 @@ fn reverse_cols<T>(pattern: &mut Vec<Vec<T>>) {
 
 pub type Pattern<T> = Vec<Vec<T>>;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub enum StampPart<T: Clone + Copy + PartialEq> {
+pub enum StampPart<T: Clone + PartialEq> {
     Use(T),
     Transparent,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub enum QueryStampPart<'a, T: Clone + Copy + PartialEq> {
-    Is(&'a [T]),
-    Not(&'a [T]),
+pub enum QueryStampPart<T: Clone + PartialEq> {
+    Is(Box<[T]>),
+    Not(Box<[T]>),
     Any,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct Stamp<T: Clone + Copy + PartialEq> {
+pub struct Stamp<T: Clone + PartialEq> {
     pub pattern: Pattern<T>,
 }
 
-impl<'a, T: Clone + Copy + PartialEq> Stamp<T> {
+impl<'a, T: Clone + PartialEq> Stamp<T> {
     pub fn new(pattern: Pattern<T>) -> Self {
         Self { pattern }
     }
@@ -80,20 +80,20 @@ impl<'a, T: Clone + Copy + PartialEq> Stamp<T> {
     }
 }
 
-impl<'a, T: Clone + Copy + PartialEq> Stamp<StampPart<T>> {
+impl<'a, T: Clone + PartialEq> Stamp<StampPart<T>> {
     pub fn stamp(&mut self, stamp: &Stamp<StampPart<T>>, pos_x: usize, pos_y: usize) {
         let stamp_height = stamp.height();
         let stamp_width = stamp.width();
         for y in pos_y..pos_y + stamp_height as usize {
             for x in pos_x..pos_x + stamp_width as usize {
-                let stamp_pattern_element = stamp.pattern[y - pos_y][x - pos_x];
+                let stamp_pattern_element = &stamp.pattern[y - pos_y][x - pos_x];
                 if let StampPart::Use(_) = stamp_pattern_element {
-                    self.pattern[y][x] = stamp_pattern_element;
+                    self.pattern[y][x] = stamp_pattern_element.clone();
                 }
             }
         }
     }
-    pub fn find(&self, query: &Stamp<QueryStampPart<'a, T>>) -> Vec<(usize, usize)> {
+    pub fn find(&self, query: &Stamp<QueryStampPart<T>>) -> Vec<(usize, usize)> {
         let mut matches = Vec::new();
         let query_height = query.height();
         let query_width = query.width();
@@ -108,16 +108,16 @@ impl<'a, T: Clone + Copy + PartialEq> Stamp<StampPart<T>> {
             'outer: for x in 0..last_x_index {
                 for (query_y, this_y) in (y..y + query_height).enumerate() {
                     for (query_x, this_x) in (x..x + query_width).enumerate() {
-                        match query.pattern[query_y][query_x] {
+                        match &query.pattern[query_y][query_x] {
                             QueryStampPart::Any => {}
                             QueryStampPart::Not(q) => {
-                                match self.pattern[this_y as usize][this_x as usize] {
+                                match &self.pattern[this_y as usize][this_x as usize] {
                                     StampPart::Use(tq) if q.contains(&tq) => continue 'outer,
                                     _ => {}
                                 }
                             }
                             QueryStampPart::Is(q) => {
-                                match self.pattern[this_y as usize][this_x as usize] {
+                                match &self.pattern[this_y as usize][this_x as usize] {
                                     StampPart::Use(tq) if q.contains(&tq) => {}
                                     _ => continue 'outer,
                                 }
@@ -194,7 +194,10 @@ mod tests {
             vec![Use(0), Use(0), Use(1)],
             vec![Use(0), Use(0), Use(0)],
         ]);
-        let query_stamp = Stamp::new(vec![vec![Is(&[1]), Is(&[1])], vec![Is(&[1]), Is(&[0])]]);
+        let query_stamp = Stamp::new(vec![
+            vec![Is(Box::new([1])), Is(Box::new([1]))],
+            vec![Is(Box::new([1])), Is(Box::new([0]))],
+        ]);
         let result = stamp.find(&query_stamp);
         let expected = vec![(0, 0)];
         assert_eq!(result, expected);
@@ -207,7 +210,10 @@ mod tests {
             vec![Use(0), Use(0), Use(1)],
             vec![Use(0), Use(0), Use(0)],
         ]);
-        let query_stamp = Stamp::new(vec![vec![Is(&[1]), Is(&[0])], vec![Is(&[0]), Is(&[1])]]);
+        let query_stamp = Stamp::new(vec![
+            vec![Is(Box::new([1])), Is(Box::new([0]))],
+            vec![Is(Box::new([0])), Is(Box::new([1]))],
+        ]);
         let result = stamp.find(&query_stamp);
         let expected = vec![(1, 0)];
         assert_eq!(result, expected);
@@ -220,7 +226,10 @@ mod tests {
             vec![Use(0), Use(0), Use(1)],
             vec![Use(0), Use(0), Use(0)],
         ]);
-        let query_stamp = Stamp::new(vec![vec![Is(&[0]), Is(&[0])], vec![Is(&[0]), Is(&[0])]]);
+        let query_stamp = Stamp::new(vec![
+            vec![Is(Box::new([0])), Is(Box::new([0]))],
+            vec![Is(Box::new([0])), Is(Box::new([0]))],
+        ]);
         let result = stamp.find(&query_stamp);
         let expected = vec![(0, 2)];
         assert_eq!(result, expected);
@@ -233,7 +242,10 @@ mod tests {
             vec![Use(0), Use(0), Use(1)],
             vec![Use(0), Use(0), Use(0)],
         ]);
-        let query_stamp = Stamp::new(vec![vec![Is(&[0]), Is(&[1])], vec![Is(&[0]), Is(&[0])]]);
+        let query_stamp = Stamp::new(vec![
+            vec![Is(Box::new([0])), Is(Box::new([1]))],
+            vec![Is(Box::new([0])), Is(Box::new([0]))],
+        ]);
         let result = stamp.find(&query_stamp);
         let expected = vec![(1, 2)];
         assert_eq!(result, expected);
@@ -247,10 +259,10 @@ mod tests {
             vec![Use(0), Use(0), Use(0)],
         ]);
         let query_stamp = Stamp::new(vec![
-            vec![Is(&[1]), Is(&[1]), Is(&[0])],
-            vec![Is(&[1]), Is(&[0]), Is(&[1])],
-            vec![Is(&[0]), Is(&[0]), Is(&[1])],
-            vec![Is(&[0]), Is(&[0]), Is(&[0])],
+            vec![Is(Box::new([1])), Is(Box::new([1])), Is(Box::new([0]))],
+            vec![Is(Box::new([1])), Is(Box::new([0])), Is(Box::new([1]))],
+            vec![Is(Box::new([0])), Is(Box::new([0])), Is(Box::new([1]))],
+            vec![Is(Box::new([0])), Is(Box::new([0])), Is(Box::new([0]))],
         ]);
         let result = stamp.find(&query_stamp);
         let expected = vec![(0, 0)];
@@ -264,7 +276,10 @@ mod tests {
             vec![Use(0), Use(0), Use(1)],
             vec![Use(0), Use(0), Use(0)],
         ]);
-        let query_stamp = Stamp::new(vec![vec![Any, Any], vec![Is(&[0]), Is(&[0])]]);
+        let query_stamp = Stamp::new(vec![
+            vec![Any, Any],
+            vec![Is(Box::new([0])), Is(Box::new([0]))],
+        ]);
         let result = stamp.find(&query_stamp);
         let expected = vec![(0, 1), (0, 2), (1, 2)];
         assert_eq!(result, expected);
@@ -277,7 +292,10 @@ mod tests {
             vec![Use(0), Use(0), Use(1)],
             vec![Use(0), Use(0), Use(0)],
         ]);
-        let query_stamp = Stamp::new(vec![vec![Not(&[1]), Any], vec![Is(&[0]), Is(&[0])]]);
+        let query_stamp = Stamp::new(vec![
+            vec![Not(Box::new([1])), Any],
+            vec![Is(Box::new([0])), Is(Box::new([0]))],
+        ]);
         let result = stamp.find(&query_stamp);
         let expected = vec![(0, 2), (1, 2)];
         assert_eq!(result, expected);
@@ -290,7 +308,7 @@ mod tests {
             vec![Use(0), Use(0), Use(1)],
             vec![Use(0), Use(0), Use(0)],
         ]);
-        let query_stamp = Stamp::new(vec![vec![Is(&[1])], vec![Is(&[1])]]);
+        let query_stamp = Stamp::new(vec![vec![Is(Box::new([1]))], vec![Is(Box::new([1]))]]);
         let result = stamp.find(&query_stamp);
         let expected = vec![(0, 0), (2, 1)];
         assert_eq!(result, expected);
