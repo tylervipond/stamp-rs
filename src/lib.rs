@@ -3,7 +3,9 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-fn transpose<T: Clone>(original_pattern: &Vec<Vec<T>>) -> Vec<Vec<T>> {
+pub type Pattern<T> = Vec<Vec<T>>;
+
+fn transpose<T: Clone>(original_pattern: &Pattern<T>) -> Pattern<T> {
     let mut pattern = vec![Vec::with_capacity(original_pattern.len()); original_pattern[0].len()];
     for r in original_pattern {
         for i in 0..r.len() {
@@ -12,14 +14,12 @@ fn transpose<T: Clone>(original_pattern: &Vec<Vec<T>>) -> Vec<Vec<T>> {
     }
     pattern
 }
-fn reverse_rows<T>(pattern: &mut Vec<Vec<T>>) {
+fn reverse_rows<T>(pattern: &mut Pattern<T>) {
     pattern.iter_mut().for_each(|row| row.reverse());
 }
-fn reverse_cols<T>(pattern: &mut Vec<Vec<T>>) {
+fn reverse_cols<T>(pattern: &mut Pattern<T>) {
     pattern.reverse();
 }
-
-pub type Pattern<T> = Vec<Vec<T>>;
 
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -60,6 +60,12 @@ impl<'a, T: Clone + PartialEq> Stamp<T> {
         self.rotate_90();
         self.rotate_90();
     }
+    pub fn flip_horizontal(&mut self) {
+        reverse_rows(&mut self.pattern);
+    }
+    pub fn flip_vertical(&mut self) {
+        reverse_cols(&mut self.pattern);
+    }
     pub fn height(&self) -> usize {
         self.pattern.len()
     }
@@ -84,8 +90,8 @@ impl<'a, T: Clone + PartialEq> Stamp<StampPart<T>> {
     pub fn stamp(&mut self, stamp: &Stamp<StampPart<T>>, pos_x: usize, pos_y: usize) {
         let stamp_height = stamp.height();
         let stamp_width = stamp.width();
-        for y in pos_y..pos_y + stamp_height as usize {
-            for x in pos_x..pos_x + stamp_width as usize {
+        for y in pos_y..pos_y + stamp_height {
+            for x in pos_x..pos_x + stamp_width {
                 let stamp_pattern_element = &stamp.pattern[y - pos_y][x - pos_x];
                 if let StampPart::Use(_) = stamp_pattern_element {
                     self.pattern[y][x] = stamp_pattern_element.clone();
@@ -110,22 +116,18 @@ impl<'a, T: Clone + PartialEq> Stamp<StampPart<T>> {
                     for (query_x, this_x) in (x..x + query_width).enumerate() {
                         match &query.pattern[query_y][query_x] {
                             QueryStampPart::Any => {}
-                            QueryStampPart::Not(q) => {
-                                match &self.pattern[this_y as usize][this_x as usize] {
-                                    StampPart::Use(tq) if q.contains(&tq) => continue 'outer,
-                                    _ => {}
-                                }
-                            }
-                            QueryStampPart::Is(q) => {
-                                match &self.pattern[this_y as usize][this_x as usize] {
-                                    StampPart::Use(tq) if q.contains(&tq) => {}
-                                    _ => continue 'outer,
-                                }
-                            }
+                            QueryStampPart::Not(q) => match &self.pattern[this_y][this_x] {
+                                StampPart::Use(tq) if q.contains(&tq) => continue 'outer,
+                                _ => {}
+                            },
+                            QueryStampPart::Is(q) => match &self.pattern[this_y][this_x] {
+                                StampPart::Use(tq) if q.contains(&tq) => {}
+                                _ => continue 'outer,
+                            },
                         }
                     }
                 }
-                matches.push((x as usize, y as usize))
+                matches.push((x, y))
             }
         }
         matches
@@ -466,10 +468,45 @@ mod tests {
         let expected = 3;
         assert_eq!(result, expected);
     }
+    #[test]
     fn it_should_return_width_of_zero_if_there_are_no_rows() {
         let stamp: Stamp<StampPart<i32>> = Stamp::new(vec![]);
         let result = stamp.width();
         let expected = 0;
         assert_eq!(result, expected);
+    }
+    #[test]
+    fn it_should_flip_horizontally() {
+        let mut stamp = Stamp::new(vec![
+            vec![Use(0), Use(0), Use(0)],
+            vec![Use(0), Use(2), Use(0)],
+            vec![Use(0), Use(0), Use(1)],
+            vec![Use(0), Use(0), Use(0)],
+        ]);
+        stamp.flip_horizontal();
+        let expected = Stamp::new(vec![
+            vec![Use(0), Use(0), Use(0)],
+            vec![Use(0), Use(2), Use(0)],
+            vec![Use(1), Use(0), Use(0)],
+            vec![Use(0), Use(0), Use(0)],
+        ]);
+        assert_eq!(stamp, expected);
+    }
+    #[test]
+    fn it_should_flip_vertically() {
+        let mut stamp = Stamp::new(vec![
+            vec![Use(0), Use(0), Use(0)],
+            vec![Use(0), Use(2), Use(0)],
+            vec![Use(0), Use(0), Use(1)],
+            vec![Use(0), Use(0), Use(0)],
+        ]);
+        stamp.flip_vertical();
+        let expected = Stamp::new(vec![
+            vec![Use(0), Use(0), Use(0)],
+            vec![Use(0), Use(0), Use(1)],
+            vec![Use(0), Use(2), Use(0)],
+            vec![Use(0), Use(0), Use(0)],
+        ]);
+        assert_eq!(stamp, expected);
     }
 }
