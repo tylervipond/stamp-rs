@@ -1,6 +1,6 @@
 [package]
 name = "stamp-rs"
-version = "0.4.6"
+version = "0.5.0"
 authors = ["tylervipond <tylervipond@gmail.com>"]
 edition = "2018"
 

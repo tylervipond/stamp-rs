@@ -99,35 +99,82 @@ impl<'a, T: Clone + PartialEq> Stamp<StampPart<T>> {
             }
         }
     }
+
+    fn find_at_position(
+        &self,
+        query: &Stamp<QueryStampPart<T>>,
+        pos_x: usize,
+        pos_y: usize,
+    ) -> bool {
+        for (query_y, this_y) in (pos_y..pos_y + query.height()).enumerate() {
+            if let Some(row) = self.pattern.get(this_y) {
+                for (query_x, this_x) in (pos_x..pos_x + query.width()).enumerate() {
+                    if let Some(col) = &row.get(this_x) {
+                        match &query.pattern[query_y][query_x] {
+                            QueryStampPart::Any => {}
+                            QueryStampPart::Not(q) => match col {
+                                StampPart::Use(tq) if q.contains(&tq) => return false,
+                                _ => {}
+                            },
+                            QueryStampPart::Is(q) => match col {
+                                StampPart::Use(tq) if q.contains(&tq) => {}
+                                _ => return false,
+                            },
+                        }
+                    } else {
+                        return false;
+                    }
+                }
+            } else {
+                return false;
+            }
+        }
+        true
+    }
+
     pub fn find(&self, query: &Stamp<QueryStampPart<T>>) -> Vec<(usize, usize)> {
         let mut matches = Vec::new();
         let query_height = query.height();
         let query_width = query.width();
         let this_height = self.height();
         let this_width = self.width();
-        if query_height > this_height || query_height == 0 || query_width > this_width {
-            return matches;
-        }
         let last_y_index = this_height - (query_height - 1);
         let last_x_index = this_width - (query_width - 1);
         for y in 0..last_y_index {
-            'outer: for x in 0..last_x_index {
-                for (query_y, this_y) in (y..y + query_height).enumerate() {
-                    for (query_x, this_x) in (x..x + query_width).enumerate() {
-                        match &query.pattern[query_y][query_x] {
-                            QueryStampPart::Any => {}
-                            QueryStampPart::Not(q) => match &self.pattern[this_y][this_x] {
-                                StampPart::Use(tq) if q.contains(&tq) => continue 'outer,
-                                _ => {}
-                            },
-                            QueryStampPart::Is(q) => match &self.pattern[this_y][this_x] {
-                                StampPart::Use(tq) if q.contains(&tq) => {}
-                                _ => continue 'outer,
-                            },
-                        }
-                    }
+            for x in 0..last_x_index {
+                if self.find_at_position(query, x, y) {
+                    matches.push((x, y))
                 }
-                matches.push((x, y))
+            }
+        }
+        matches
+    }
+
+    pub fn find_at_xy(&self, query: &Stamp<QueryStampPart<T>>, pos_x: usize, pos_y: usize) -> bool {
+        self.find_at_position(query, pos_x, pos_y)
+    }
+
+    pub fn find_at_y(&self, query: &Stamp<QueryStampPart<T>>, pos_y: usize) -> Vec<(usize, usize)> {
+        let mut matches = Vec::new();
+        let query_width = query.width();
+        let this_width = self.width();
+        let last_x_index = this_width - (query_width - 1);
+        for pos_x in 0..last_x_index {
+            if self.find_at_position(query, pos_x, pos_y) {
+                matches.push((pos_x, pos_y))
+            }
+        }
+        matches
+    }
+
+    pub fn find_at_x(&self, query: &Stamp<QueryStampPart<T>>, pos_x: usize) -> Vec<(usize, usize)> {
+        let mut matches = Vec::new();
+        let query_height = query.height();
+        let this_height = self.height(); //4
+        let last_y_index = this_height - (query_height - 1); //4
+        for pos_y in 0..last_y_index {
+            if self.find_at_position(query, pos_x, pos_y) {
+                matches.push((pos_x, pos_y))
             }
         }
         matches
@@ -508,5 +555,57 @@ mod tests {
             vec![Use(0), Use(0), Use(0)],
         ]);
         assert_eq!(stamp, expected);
+    }
+
+    #[test]
+    fn find_at_xy_should_return_true_if_stamp_is_at_xy() {
+        let expected = true;
+        let stamp = Stamp::new(vec![
+            vec![Use(0), Use(0), Use(0)],
+            vec![Use(0), Use(0), Use(1)],
+            vec![Use(0), Use(2), Use(0)],
+            vec![Use(0), Use(0), Use(0)],
+        ]);
+        let query_stamp = Stamp::new(vec![vec![QueryStampPart::Is(Box::new([2]))]]);
+        assert_eq!(stamp.find_at_xy(&query_stamp, 1, 2), expected);
+    }
+
+    #[test]
+    fn find_at_xy_should_return_false_if_stamp_not_at_xy() {
+        let expected = false;
+        let stamp = Stamp::new(vec![
+            vec![Use(0), Use(0), Use(0)],
+            vec![Use(0), Use(0), Use(1)],
+            vec![Use(0), Use(2), Use(0)],
+            vec![Use(0), Use(0), Use(0)],
+        ]);
+        let query_stamp = Stamp::new(vec![vec![QueryStampPart::Is(Box::new([2]))]]);
+        assert_eq!(stamp.find_at_xy(&query_stamp, 1, 1), expected);
+    }
+
+    #[test]
+    fn find_at_x_should_return_all_matching_positions_at_x() {
+        let expected = vec![(1, 0), (1, 1), (1, 3)];
+        let stamp = Stamp::new(vec![
+            vec![Use(0), Use(0), Use(0)],
+            vec![Use(0), Use(0), Use(1)],
+            vec![Use(0), Use(2), Use(0)],
+            vec![Use(0), Use(0), Use(0)],
+        ]);
+        let query_stamp = Stamp::new(vec![vec![QueryStampPart::Is(Box::new([0]))]]);
+        assert_eq!(stamp.find_at_x(&query_stamp, 1), expected);
+    }
+
+    #[test]
+    fn find_at_y_should_return_all_matching_positions_at_y() {
+        let expected = vec![(0, 2), (2, 2)];
+        let stamp = Stamp::new(vec![
+            vec![Use(0), Use(0), Use(0)],
+            vec![Use(0), Use(0), Use(1)],
+            vec![Use(0), Use(2), Use(0)],
+            vec![Use(0), Use(0), Use(0)],
+        ]);
+        let query_stamp = Stamp::new(vec![vec![QueryStampPart::Is(Box::new([0]))]]);
+        assert_eq!(stamp.find_at_y(&query_stamp, 2), expected);
     }
 }
