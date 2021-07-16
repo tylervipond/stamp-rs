@@ -113,11 +113,11 @@ impl<'a, T: Clone + PartialEq> Stamp<StampPart<T>> {
                         match &query.pattern[query_y][query_x] {
                             QueryStampPart::Any => {}
                             QueryStampPart::Not(q) => match col {
-                                StampPart::Use(tq) if q.contains(&tq) => return false,
+                                StampPart::Use(tq) if q.contains(tq) => return false,
                                 _ => {}
                             },
                             QueryStampPart::Is(q) => match col {
-                                StampPart::Use(tq) if q.contains(&tq) => {}
+                                StampPart::Use(tq) if q.contains(tq) => {}
                                 _ => return false,
                             },
                         }
@@ -134,12 +134,11 @@ impl<'a, T: Clone + PartialEq> Stamp<StampPart<T>> {
 
     pub fn find(&self, query: &Stamp<QueryStampPart<T>>) -> Vec<(usize, usize)> {
         let mut matches = Vec::new();
-        let query_height = query.height();
-        let query_width = query.width();
-        let this_height = self.height();
-        let this_width = self.width();
-        let last_y_index = this_height - (query_height - 1);
-        let last_x_index = this_width - (query_width - 1);
+        if query.height() >= self.height() || query.width() >= self.width() {
+            return matches;
+        }
+        let last_y_index = self.height() - (query.height() - 1);
+        let last_x_index = self.width() - (query.width() - 1);
         for y in 0..last_y_index {
             for x in 0..last_x_index {
                 if self.find_at_position(query, x, y) {
@@ -156,9 +155,10 @@ impl<'a, T: Clone + PartialEq> Stamp<StampPart<T>> {
 
     pub fn find_at_y(&self, query: &Stamp<QueryStampPart<T>>, pos_y: usize) -> Vec<(usize, usize)> {
         let mut matches = Vec::new();
-        let query_width = query.width();
-        let this_width = self.width();
-        let last_x_index = this_width - (query_width - 1);
+        if query.height() >= self.height() || query.width() >= self.width() {
+            return matches;
+        }
+        let last_x_index = self.width() - (query.width() - 1);
         for pos_x in 0..last_x_index {
             if self.find_at_position(query, pos_x, pos_y) {
                 matches.push((pos_x, pos_y))
@@ -169,9 +169,10 @@ impl<'a, T: Clone + PartialEq> Stamp<StampPart<T>> {
 
     pub fn find_at_x(&self, query: &Stamp<QueryStampPart<T>>, pos_x: usize) -> Vec<(usize, usize)> {
         let mut matches = Vec::new();
-        let query_height = query.height();
-        let this_height = self.height(); //4
-        let last_y_index = this_height - (query_height - 1); //4
+        if query.height() >= self.height() || query.width() >= self.width() {
+            return matches;
+        }
+        let last_y_index = self.height() - (query.height() - 1);
         for pos_y in 0..last_y_index {
             if self.find_at_position(query, pos_x, pos_y) {
                 matches.push((pos_x, pos_y))
