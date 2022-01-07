@@ -5,15 +5,19 @@ use serde::{Deserialize, Serialize};
 
 pub type Pattern<T> = Vec<Vec<T>>;
 
-fn transpose<T: Clone>(original_pattern: &Pattern<T>) -> Pattern<T> {
-    let mut pattern = vec![Vec::with_capacity(original_pattern.len()); original_pattern[0].len()];
-    for r in original_pattern {
-        for i in 0..r.len() {
-            pattern[i].push(r[i].clone());
-        }
-    }
-    pattern
+fn transpose<T>(v: &mut Vec<Vec<T>>) -> Vec<Vec<T>> {
+    let len = v[0].len();
+    let mut iters: Vec<_> = v.drain(0..).map(|n| n.into_iter()).collect();
+    (0..len)
+        .map(|_| {
+            iters
+                .iter_mut()
+                .map(|n| n.next().unwrap())
+                .collect::<Vec<T>>()
+        })
+        .collect()
 }
+
 fn reverse_rows<T>(pattern: &mut Pattern<T>) {
     pattern.iter_mut().for_each(|row| row.reverse());
 }
@@ -47,12 +51,12 @@ impl<'a, T: Clone + PartialEq> Stamp<T> {
         Self { pattern }
     }
     pub fn rotate_90(&mut self) {
-        let mut pattern = transpose(&self.pattern);
+        let mut pattern = transpose(&mut self.pattern);
         reverse_rows(&mut pattern);
         self.pattern = pattern;
     }
     pub fn rotate_n90(&mut self) {
-        let mut pattern = transpose(&self.pattern);
+        let mut pattern = transpose(&mut self.pattern);
         reverse_cols(&mut pattern);
         self.pattern = pattern;
     }
@@ -134,7 +138,7 @@ impl<'a, T: Clone + PartialEq> Stamp<StampPart<T>> {
 
     pub fn find(&self, query: &Stamp<QueryStampPart<T>>) -> Vec<(usize, usize)> {
         let mut matches = Vec::new();
-        if query.height() >= self.height() || query.width() >= self.width() {
+        if query.height() > self.height() || query.width() > self.width() {
             return matches;
         }
         let last_y_index = self.height() - (query.height() - 1);
