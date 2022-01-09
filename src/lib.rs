@@ -141,10 +141,10 @@ impl<'a, T: Clone + PartialEq> Stamp<StampPart<T>> {
         if query.height() > self.height() || query.width() > self.width() {
             return matches;
         }
-        let last_y_index = self.height() - (query.height() - 1);
-        let last_x_index = self.width() - (query.width() - 1);
-        for y in 0..last_y_index {
-            for x in 0..last_x_index {
+        let last_y_index = self.height() - query.height();
+        let last_x_index = self.width() - query.width();
+        for y in 0..=last_y_index {
+            for x in 0..=last_x_index {
                 if self.find_at_position(query, x, y) {
                     matches.push((x, y))
                 }
@@ -159,11 +159,11 @@ impl<'a, T: Clone + PartialEq> Stamp<StampPart<T>> {
 
     pub fn find_at_y(&self, query: &Stamp<QueryStampPart<T>>, pos_y: usize) -> Vec<(usize, usize)> {
         let mut matches = Vec::new();
-        if query.height() >= self.height() || query.width() >= self.width() {
+        if query.height() > self.height() || query.width() > self.width() {
             return matches;
         }
-        let last_x_index = self.width() - (query.width() - 1);
-        for pos_x in 0..last_x_index {
+        let last_x_index = self.width() - query.width();
+        for pos_x in 0..=last_x_index {
             if self.find_at_position(query, pos_x, pos_y) {
                 matches.push((pos_x, pos_y))
             }
@@ -173,11 +173,11 @@ impl<'a, T: Clone + PartialEq> Stamp<StampPart<T>> {
 
     pub fn find_at_x(&self, query: &Stamp<QueryStampPart<T>>, pos_x: usize) -> Vec<(usize, usize)> {
         let mut matches = Vec::new();
-        if query.height() >= self.height() || query.width() >= self.width() {
+        if query.height() > self.height() || query.width() > self.width() {
             return matches;
         }
-        let last_y_index = self.height() - (query.height() - 1);
-        for pos_y in 0..last_y_index {
+        let last_y_index = self.height() - query.height();
+        for pos_y in 0..=last_y_index {
             if self.find_at_position(query, pos_x, pos_y) {
                 matches.push((pos_x, pos_y))
             }
